@@ -114,7 +114,28 @@ CREATE INDEX idx_products_featured ON products(featured);
 CREATE INDEX idx_products_slug ON products(slug);
 
 -- ============================================
--- 4. ORDERS TABLE (Đơn hàng)
+-- 4. SERVICES TABLE (Dịch vụ)
+-- ============================================
+CREATE TABLE IF NOT EXISTS services (
+  id INTEGER PRIMARY KEY,
+  service_group VARCHAR(20) NOT NULL CHECK (service_group IN ('main', 'additional', 'dye', 'vip', 'vaccination', 'grooming', 'bath', 'hotel')),
+  service_type VARCHAR(50),
+  name VARCHAR(255) NOT NULL,
+  description TEXT,
+  image TEXT,
+  price INTEGER,
+  prices JSONB,
+  duration VARCHAR(100),
+  benefits TEXT[],
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_services_group ON services(service_group);
+CREATE INDEX idx_services_name ON services(name);
+
+-- ============================================
+-- 5. ORDERS TABLE (Đơn hàng)
 -- ============================================
 CREATE TABLE IF NOT EXISTS orders (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -157,7 +178,29 @@ CREATE INDEX idx_orders_delivery_status ON orders(delivery_status);
 CREATE INDEX idx_orders_created_at ON orders(created_at DESC);
 
 -- ============================================
--- 5. PETS TABLE (Thú cưng của khách hàng)
+-- 5. CUSTOMERS TABLE (Thông tin khách hàng)
+-- ============================================
+CREATE TABLE IF NOT EXISTS customers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  full_name VARCHAR(255) NOT NULL,
+  email VARCHAR(255) UNIQUE,
+  phone VARCHAR(20) UNIQUE,
+  address TEXT,
+  city VARCHAR(100),
+  district VARCHAR(100),
+  ward VARCHAR(100),
+  notes TEXT,
+  status VARCHAR(20) DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'blocked')),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE INDEX idx_customers_email ON customers(email);
+CREATE INDEX idx_customers_phone ON customers(phone);
+CREATE INDEX idx_customers_status ON customers(status);
+
+-- ============================================
+-- 6. PETS TABLE (Thú cưng của khách hàng)
 -- ============================================
 CREATE TABLE IF NOT EXISTS pets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -298,6 +341,9 @@ CREATE TRIGGER update_medical_records_updated_at BEFORE UPDATE ON medical_record
 CREATE TRIGGER update_staff_users_updated_at BEFORE UPDATE ON staff_users
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_customers_updated_at BEFORE UPDATE ON customers
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 -- ============================================
 -- ROW LEVEL SECURITY (RLS) - Optional
 -- ============================================
@@ -326,6 +372,7 @@ COMMENT ON TABLE doctors IS 'Danh sách bác sĩ thú y của cửa hàng';
 COMMENT ON TABLE bookings IS 'Lịch hẹn dịch vụ (spa, grooming, vaccination, hotel)';
 COMMENT ON TABLE products IS 'Sản phẩm bán tại pet shop';
 COMMENT ON TABLE orders IS 'Đơn hàng của khách';
+COMMENT ON TABLE customers IS 'Thông tin khách hàng';
 COMMENT ON TABLE pets IS 'Thông tin thú cưng của khách hàng';
 COMMENT ON TABLE medical_records IS 'Hồ sơ bệnh án của thú cưng';
 COMMENT ON TABLE staff_users IS 'Thông tin nhân viên hệ thống';

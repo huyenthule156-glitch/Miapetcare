@@ -152,7 +152,7 @@ export function StaffServices() {
     };
   };
 
-  const handleSubmitBooking = () => {
+  const handleSubmitBooking = async () => {
     // Validate
     if (!bookingForm.customerName || !bookingForm.customerPhone || !bookingForm.appointmentDate || !bookingForm.appointmentTime) {
       alert("Vui lòng điền đầy đủ thông tin bắt buộc!");
@@ -178,7 +178,7 @@ export function StaffServices() {
     const hotelTotal = calculateHotelTotal();
 
     // Create booking using service layer (will be replaced with API call)
-    createBooking({
+    await createBooking({
       customerName: bookingForm.customerName,
       customerPhone: bookingForm.customerPhone,
       petName: bookingForm.petName,

@@ -1,9 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { AdminLayout } from "../../components/admin-layout";
 import { Package, Plus, Search, Edit2, Trash2, AlertCircle, Eye, TrendingUp, TrendingDown } from "lucide-react";
 import { useInventory } from "../../context/inventory-context";
 import { AdminEditProductModal } from "../../components/admin-edit-product-modal";
 import { AdminAddProductModal } from "../../components/admin-add-product-modal";
+import { supabase } from "../../lib/supabase-client";
+import { setupDatabase } from "../../lib/api-client";
 import type { Product } from "../../data/products-data-new";
 
 export function AdminProducts() {
@@ -12,6 +14,11 @@ export function AdminProducts() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [supabaseProducts, setSupabaseProducts] = useState<any[]>([]);
+  const [supabaseLoading, setSupabaseLoading] = useState(false);
+  const [supabaseMessage, setSupabaseMessage] = useState<string>("");
+  const [setupLoading, setSetupLoading] = useState(false);
+  const [setupMessage, setSetupMessage] = useState<string>("");
   const { products, addProduct, updateProduct, deleteProduct } = useInventory();
 
   const categoryMap: Record<string, string> = {
@@ -66,6 +73,50 @@ export function AdminProducts() {
     }
   };
 
+  const handleFetchSupabaseProducts = async () => {
+    setSupabaseLoading(true);
+    setSupabaseMessage("");
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .order('name', { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      setSupabaseProducts(data ?? []);
+      setSupabaseMessage(`Đã tải ${data?.length ?? 0} sản phẩm từ Supabase.`);
+    } catch (error) {
+      setSupabaseMessage(`Lỗi khi tải Supabase: ${error instanceof Error ? error.message : String(error)}`);
+      setSupabaseProducts([]);
+    } finally {
+      setSupabaseLoading(false);
+    }
+  };
+
+  const handleSetupSupabase = async () => {
+    setSetupLoading(true);
+    setSetupMessage("");
+    try {
+      const response = await setupDatabase();
+      if (response.success) {
+        setSetupMessage(`Setup Supabase thành công: ${response.message}`);
+      } else {
+        setSetupMessage(`Setup Supabase thất bại: ${response.message}`);
+      }
+    } catch (error) {
+      setSetupMessage(`Lỗi khi setup Supabase: ${error instanceof Error ? error.message : String(error)}`);
+    } finally {
+      setSetupLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    handleFetchSupabaseProducts();
+  }, []);
+
   return (
     <AdminLayout title="Quản lý sản phẩm">
       {/* Header Actions */}
@@ -103,6 +154,57 @@ export function AdminProducts() {
             <span>Thêm sản phẩm</span>
           </button>
         </div>
+      </div>
+
+      {/* Supabase Actions */}
+      <div className="mb-6 bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Supabase</h2>
+            <p className="text-sm text-gray-500">
+              Chạy seed sample data hoặc tải danh sách sản phẩm hiện có từ Supabase.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <button
+              onClick={handleSetupSupabase}
+              disabled={setupLoading}
+              className="bg-blue-600 text-white px-5 py-3 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {setupLoading ? 'Đang setup...' : 'Seed Supabase'}
+            </button>
+            <button
+              onClick={handleFetchSupabaseProducts}
+              disabled={supabaseLoading}
+              className="bg-green-600 text-white px-5 py-3 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {supabaseLoading ? 'Đang tải...' : 'Tải sản phẩm từ Supabase'}
+            </button>
+          </div>
+        </div>
+
+        {(setupMessage || supabaseMessage) && (
+          <div className="mt-4 text-sm text-gray-700 space-y-1">
+            {setupMessage && <div>{setupMessage}</div>}
+            {supabaseMessage && <div>{supabaseMessage}</div>}
+          </div>
+        )}
+
+        {supabaseProducts.length > 0 && (
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {supabaseProducts.slice(0, 6).map((product) => (
+              <div key={product.id} className="rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-800">
+                {product.name}
+              </div>
+            ))}
+            {supabaseProducts.length > 6 && (
+              <div className="rounded-lg border border-dashed border-gray-300 bg-white p-3 text-xs text-gray-500">
+                +{supabaseProducts.length - 6} sản phẩm khác
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Stats */}
